@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design System Pipeline Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@87,600;87,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a wiring-diagram map (Figma · repo · where it's used, plus a checks rail) beside a side panel.
+   The panel opens on an overview of the system; scenarios replay one change step by step. */
+:root {
+  --bg: #f1f3f6; --panel: #ffffff; --ink: #142029; --muted: #566676; --line: #c5cfd9; --line-soft: #dde3ea;
+  --band-fig: #efeafd; --band-repo: #e7edf4; --band-use: #e6f2ec; --band-chk: #f5efe4;
+  --accent: #2148d8; --accent-soft: rgba(33, 72, 216, .12);
+  --pass: #1b7a44; --fail: #bf2f26; --warn: #9a6205; --idle: #8794a1;
+  --pass-soft: rgba(27,122,68,.12); --fail-soft: rgba(191,47,38,.12); --warn-soft: rgba(154,98,5,.13);
+  --tip-bg: #142029; --tip-ink: #f1f4f7; --tip-muted: #a9b6c2;
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0c1218; --panel: #131b24; --ink: #e2e9ef; --muted: #93a2b0; --line: #34424f; --line-soft: #222e3a;
+  --band-fig: #1c1830; --band-repo: #152029; --band-use: #13231d; --band-chk: #241e13;
+  --accent: #7b96ff; --accent-soft: rgba(123,150,255,.16);
+  --pass: #4cc283; --fail: #ff7064; --warn: #e2a843; --idle: #64727f;
+  --pass-soft: rgba(76,194,131,.15); --fail-soft: rgba(255,112,100,.15); --warn-soft: rgba(226,168,67,.16);
+  --tip-bg: #e6ecf1; --tip-ink: #121a22; --tip-muted: #4f5e6b;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0c1218; --panel: #131b24; --ink: #e2e9ef; --muted: #93a2b0; --line: #34424f; --line-soft: #222e3a;
+  --band-fig: #1c1830; --band-repo: #152029; --band-use: #13231d; --band-chk: #241e13;
+  --accent: #7b96ff; --accent-soft: rgba(123,150,255,.16);
+  --pass: #4cc283; --fail: #ff7064; --warn: #e2a843; --idle: #64727f;
+  --pass-soft: rgba(76,194,131,.15); --fail-soft: rgba(255,112,100,.15); --warn-soft: rgba(226,168,67,.16);
+  --tip-bg: #e6ecf1; --tip-ink: #121a22; --tip-muted: #4f5e6b;
+  color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+.wrap { max-width: 1440px; margin: 0 auto; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 22px; }
+h1, h2, h3 { font-family: var(--display); font-stretch: 87%; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(26px, 3.4vw, 36px); font-weight: 700; letter-spacing: -.01em; }
+h2 { font-size: 20px; font-weight: 700; }
+h3 { font-size: 16px; font-weight: 600; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-size: .86em; }
+.lede { color: var(--muted); max-width: 72ch; }
+header { display: flex; flex-direction: column; gap: 8px; }
+.eyebrow { font: 500 11.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+
+/* Picker */
+.picker { display: grid; grid-template-columns: minmax(180px, .6fr) repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 980px) { .picker { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); } }
+.group { background: var(--panel); border: 1px solid var(--line-soft); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.group .eyebrow { font-size: 10.5px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 13.5px/1.25 var(--body); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; cursor: pointer; text-align: left; }
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.chip.big { font-weight: 600; }
+.chip:focus-visible, button:focus-visible, .node:focus-visible, .idea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Main grid */
+.main { display: grid; grid-template-columns: minmax(0, 2.3fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 980px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.mapcard { background: var(--panel); border: 1px solid var(--line-soft); border-radius: 12px; padding: 10px; min-width: 0; position: relative; }
+.mapscroll { overflow-x: auto; }
+svg.map { display: block; width: 100%; min-width: 760px; height: auto; font-family: var(--body); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 6px 2px; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 18px; height: 11px; border-radius: 3px; border: 1.5px solid var(--ink); display: inline-block; }
+.sw.gen { border-style: dashed; border-color: var(--muted); }
+.sw.copy { border-style: dotted; border-color: var(--muted); }
+.sw.sot { border-width: 2.5px; }
+.sw.chk { border-radius: 999px; border-color: var(--muted); }
+
+/* Tooltip */
+.tip { position: absolute; z-index: 5; max-width: 300px; background: var(--tip-bg); color: var(--tip-ink); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; line-height: 1.45; pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+.tip b { display: block; font-weight: 600; margin-bottom: 2px; }
+.tip .k { display: block; font: 500 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--tip-muted); margin-bottom: 4px; }
+.tip .more { display: block; color: var(--tip-muted); font-size: 12px; margin-top: 6px; }
+
+/* SVG parts */
+.band rect { stroke: none; }
+.band text { font: 600 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; fill: var(--muted); }
+.node, .check { cursor: pointer; }
+.node rect.box { fill: var(--panel); stroke: var(--line); stroke-width: 1.25; transition: stroke .2s, fill .2s, opacity .2s; }
+.node.gen rect.box { stroke-dasharray: 5 3; }
+.node.copy rect.box { stroke-dasharray: 2 3; }
+.node.sot rect.box { stroke: var(--ink); stroke-width: 2.4; }
+.node .lbl { font-size: 14px; font-weight: 600; fill: var(--ink); }
+.node .sub { font: 11px var(--mono); fill: var(--muted); }
+.node .tag { font: 600 9px var(--mono); letter-spacing: .1em; fill: var(--muted); }
+.node.sot .tag { fill: var(--ink); }
+.node:hover rect.box, .node:focus rect.box { stroke: var(--accent); }
+.node.selected rect.box { stroke: var(--accent); stroke-width: 2.4; }
+.node, .edge, .check { transition: opacity .2s; }
+.map.dim .node:not(.on) { opacity: .3; }
+.map.dim .edge:not(.on) { opacity: .16; }
+.map.dim .check:not(.on):not(.pass):not(.fail):not(.warn) { opacity: .4; }
+.node.on rect.box { stroke: var(--accent); stroke-width: 2.6; fill: var(--accent-soft); }
+.edge path { fill: none; stroke: var(--line); stroke-width: 1.5; transition: stroke .2s; }
+.edge.on path { stroke: var(--accent); stroke-width: 2.4; stroke-dasharray: 7 5; animation: flow 1.1s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -24; } }
+@media (prefers-reduced-motion: reduce) { .edge.on path { animation: none; stroke-dasharray: none; } }
+.check rect.pill { fill: var(--panel); stroke: var(--line); stroke-width: 1.25; }
+.check.on rect.pill { stroke: var(--accent); stroke-width: 2.2; fill: var(--accent-soft); }
+.check:hover rect.pill { stroke: var(--accent); }
+.check .lbl { font: 600 13px var(--mono); fill: var(--ink); }
+.check .sub { font: 11px var(--body); fill: var(--muted); }
+.check .dot { fill: var(--idle); }
+.check.pass rect.pill { stroke: var(--pass); fill: var(--pass-soft); stroke-width: 2; } .check.pass .dot { fill: var(--pass); }
+.check.fail rect.pill { stroke: var(--fail); fill: var(--fail-soft); stroke-width: 2; } .check.fail .dot { fill: var(--fail); }
+.check.warn rect.pill { stroke: var(--warn); fill: var(--warn-soft); stroke-width: 2; } .check.warn .dot { fill: var(--warn); }
+.check.pass .sub { fill: var(--pass); font-weight: 600; } .check.fail .sub { fill: var(--fail); font-weight: 600; } .check.warn .sub { fill: var(--warn); font-weight: 600; }
+marker path { fill: var(--line); }
+#arrow-on path { fill: var(--accent); }
+
+/* Side panel */
+.panel { background: var(--panel); border: 1px solid var(--line-soft); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (max-width: 980px) { .panel { position: static; } }
+.scen-meta { display: flex; flex-direction: column; gap: 4px; }
+.example { font-size: 13.5px; color: var(--muted); }
+.ideas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; counter-reset: idea; }
+.idea { display: grid; grid-template-columns: 26px 1fr; gap: 2px 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+.idea::before { counter-increment: idea; content: counter(idea); grid-row: span 2; font: 600 13px/22px var(--mono); color: var(--accent); text-align: center; border: 1.5px solid var(--accent); border-radius: 50%; width: 24px; height: 24px; }
+.idea b { font-weight: 600; }
+.idea span { color: var(--muted); font-size: 13.5px; grid-column: 2; }
+.idea:hover, .idea.on { background: var(--accent-soft); border-color: var(--accent-soft); }
+.progress { display: flex; gap: 5px; }
+.progress button { flex: 1; height: 6px; border: 0; border-radius: 3px; background: var(--line-soft); cursor: pointer; padding: 0; }
+.progress button.done { background: var(--accent); opacity: .45; }
+.progress button.cur { background: var(--accent); }
+.step { display: flex; flex-direction: column; gap: 8px; min-height: 9.5em; }
+.stepno { font: 500 11.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.step h3 { font-size: 18px; }
+.note { font-size: 13.5px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; }
+.note b { color: var(--ink); font-weight: 600; }
+.checklist { display: flex; flex-direction: column; gap: 6px; }
+.checklist .row { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: baseline; font-size: 13.5px; }
+.checklist .row div { min-width: 0; }
+.checklist .row .name { font-family: var(--mono); font-size: 12.5px; font-weight: 500; }
+.badge { font: 600 10.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; padding: 4px 7px; border-radius: 4px; white-space: nowrap; align-self: flex-start; }
+.badge.pass { color: var(--pass); background: var(--pass-soft); }
+.badge.fail { color: var(--fail); background: var(--fail-soft); }
+.badge.warn { color: var(--warn); background: var(--warn-soft); }
+.badge.plain { color: var(--muted); background: var(--line-soft); }
+.nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nav button { font: 600 14px var(--body); border-radius: 8px; padding: 9px 14px; cursor: pointer; border: 1px solid var(--line); background: transparent; color: var(--ink); }
+.nav button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.nav button:disabled { opacity: .4; cursor: default; }
+.nav .hint { margin-left: auto; font-size: 12px; color: var(--muted); }
+.detail { border-top: 1px solid var(--line-soft); padding-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.detail dl { display: grid; grid-template-columns: 7.2em 1fr; gap: 6px 10px; margin: 0; font-size: 13.5px; }
+.detail dt { color: var(--muted); }
+.detail dd { margin: 0; min-width: 0; }
+.empty { color: var(--muted); font-size: 14px; }
+
+/* Reference sections */
+section.ref { display: flex; flex-direction: column; gap: 12px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.card { background: var(--panel); border: 1px solid var(--line-soft); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.card h3 { font-family: var(--mono); font-stretch: normal; font-size: 14px; font-weight: 500; }
+.card p { font-size: 13.5px; }
+.card .k { font: 500 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.tablewrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line-soft); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 640px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+th { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+footer { font-size: 13px; color: var(--muted); max-width: 80ch; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Figma · code · checks · AI agents</p>
+    <h1>Design system pipeline map</h1>
+    <p class="lede">How a design system stays the same in Figma and in code: what is defined where, what is generated from it, and which checks catch drift. Start with the overview, point at any box to see its role, then replay a change.</p>
+  </header>
+
+  <div class="picker" id="picker" aria-label="Views"></div>
+
+  <div class="main">
+    <div class="mapcard" id="mapcard">
+      <div class="mapscroll"><svg class="map" id="map" viewBox="0 0 992 600" role="img" aria-label="Map of the design system: Figma, the repository, where it is used, and the automated checks"></svg></div>
+      <div class="legend">
+        <span><i class="sw sot"></i>Source of truth</span>
+        <span><i class="sw gen"></i>Generated, never edited</span>
+        <span><i class="sw copy"></i>Copy of Figma, saved in the repo</span>
+        <span><i class="sw"></i>Hand-written</span>
+        <span><i class="sw chk"></i>Automated check</span>
+      </div>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+
+  <section class="ref">
+    <h2>The checks</h2>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section class="ref">
+    <h2>What is defined where</h2>
+    <div class="tablewrap"><table id="where"></table></div>
+  </section>
+
+  <footer>A reference model, not a product. File and command names are examples: swap in your own stack (plain CSS or a library such as MUI, Storybook or another docs tool). What matters is the pattern: one source of truth for each thing, generated copies that are never edited, and checks that compare them.</footer>
+</div>
+
+<script src="map-data.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const svgNS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(svgNS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (parent) parent.appendChild(e); return e; };
+const roleTag = { sot: 'Source of truth', gen: 'Generated', copy: 'Copy of Figma', hand: 'Hand-written', mirror: 'Mirrors code', use: 'Uses it', check: 'Check' };
+const STATUS_WORD = { pass: 'Pass', fail: 'Fails', warn: 'Warning' };
+
+/* Draw the map */
+const map = $('#map');
+const defs = el('defs', {}, map);
+for (const id of ['arrow', 'arrow-on']) {
+  const m = el('marker', { id, viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0 0L10 5L0 10z' }, m);
+}
+const bands = el('g', { class: 'band' }, map);
+[[X[0] - 10, W + 20, 'var(--band-fig)', 'Figma'], [X[1] - 10, X[3] + W - X[1] + 20, 'var(--band-repo)', 'Repo (Git)'], [X[4] - 10, W + 20, 'var(--band-use)', 'Where it\'s used']]
+  .forEach(([x, w, fill, label]) => { el('rect', { x, y: 6, width: w, height: 492, rx: 10, fill }, bands); const t = el('text', { x: x + 12, y: 28 }, bands); t.textContent = label; });
+el('rect', { x: 10, y: 512, width: 972, height: 82, rx: 10, fill: 'var(--band-chk)' }, bands);
+const ct = el('text', { x: 22, y: 532 }, bands); ct.textContent = 'Automated checks (CI) and review';
+
+const edgeLayer = el('g', {}, map);
+const edgeEls = {};
+for (const [id, d] of Object.entries(EDGES)) {
+  const g = el('g', { class: 'edge' }, edgeLayer);
+  el('path', { d: d(), 'marker-end': 'url(#arrow)' }, g);
+  edgeEls[id] = g;
+}
+const nodeEls = {};
+for (const [id, n] of Object.entries(NODES)) {
+  const cls = ['node', n.role === 'sot' ? 'sot' : n.role === 'gen' ? 'gen' : n.role === 'copy' ? 'copy' : ''].join(' ').trim();
+  const g = el('g', { class: cls, tabindex: '0', role: 'button', 'aria-label': `${n.label}, ${roleTag[n.role]}. ${n.purpose}` }, map);
+  el('rect', { class: 'box', x: n.x, y: n.y, width: W, height: H, rx: 8 }, g);
+  el('text', { class: 'tag', x: n.x + 10, y: n.y + 13 }, g).textContent = n.tag;
+  el('text', { class: 'lbl', x: n.x + 10, y: n.y + 31 }, g).textContent = n.label;
+  el('text', { class: 'sub', x: n.x + 10, y: n.y + 43 }, g).textContent = n.sub;
+  wire(g, () => tipFor(n.label, roleTag[n.role], n.purpose), () => select('n:' + id));
+  nodeEls[id] = g;
+}
+const checkEls = {};
+for (const [id, c] of Object.entries(CHECKS)) {
+  const g = el('g', { class: 'check', tabindex: '0', role: 'button', 'aria-label': `${c.label}, check. ${c.purpose}` }, map);
+  el('rect', { class: 'pill', x: c.x, y: 542, width: W, height: 42, rx: 21 }, g);
+  el('circle', { class: 'dot', cx: c.x + 18, cy: 563, r: 5 }, g);
+  el('text', { class: 'lbl', x: c.x + 30, y: 560 }, g).textContent = c.label;
+  const s = el('text', { class: 'sub', x: c.x + 30, y: 575 }, g); s.textContent = c.sub; s.dataset.sub = c.sub;
+  wire(g, () => tipFor(c.label, 'Automated check', c.purpose), () => select('c:' + id));
+  checkEls[id] = g;
+}
+
+/* Hover explanations */
+const tip = $('#tip'), mapcard = $('#mapcard');
+function tipFor(title, kind, text) { return `<span class="k">${kind}</span><b>${title}</b>${text}<span class="more">Click for details</span>`; }
+function wire(g, html, onClick) {
+  const show = () => {
+    tip.innerHTML = html(); tip.hidden = false;
+    const r = g.getBoundingClientRect(), c = mapcard.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = r.left - c.left + r.width / 2 - tw / 2;
+    left = Math.max(8, Math.min(left, c.width - tw - 8));
+    let top = r.top - c.top - th - 8;
+    if (top < 8) top = r.bottom - c.top + 8;
+    tip.style.left = left + 'px'; tip.style.top = top + 'px';
+  };
+  const hide = () => { tip.hidden = true; };
+  g.addEventListener('mouseenter', show); g.addEventListener('mouseleave', hide);
+  g.addEventListener('focus', show); g.addEventListener('blur', hide);
+  g.addEventListener('click', () => { hide(); onClick(); });
+  g.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onClick(); } });
+}
+$('.mapscroll').addEventListener('scroll', () => { tip.hidden = true; });
+mapcard.addEventListener('mouseenter', () => { if (view === 'overview' && idea !== null) { idea = null; paintIdea(); } });
+
+/* State */
+let view = 'overview', step = 0, selected = null, idea = null;
+const initial = location.hash.slice(1);
+if (SCENARIOS.find(s => s.id === initial)) view = initial;
+
+/* Picker */
+const picker = $('#picker');
+const ov = document.createElement('div'); ov.className = 'group';
+ov.innerHTML = `<p class="eyebrow">Start here</p><div class="chips"><button type="button" class="chip big" id="chip-overview">Overview</button></div>`;
+ov.querySelector('button').addEventListener('click', () => { view = 'overview'; step = 0; idea = null; render(); });
+picker.appendChild(ov);
+for (const gname of ['Tokens', 'Components', 'Agents']) {
+  const g = document.createElement('div'); g.className = 'group';
+  g.innerHTML = `<p class="eyebrow">Replay a change: ${gname.toLowerCase()}</p><div class="chips"></div>`;
+  for (const s of SCENARIOS.filter(s => s.group === gname)) {
+    const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.id = 'chip-' + s.id; b.textContent = s.title;
+    b.addEventListener('click', () => { view = s.id; step = 0; render(); });
+    g.querySelector('.chips').appendChild(b);
+  }
+  picker.appendChild(g);
+}
+
+function paint({ n = [], e = [], c = {}, on = [] } = {}, dim) {
+  map.classList.toggle('dim', dim);
+  for (const [id, g] of Object.entries(nodeEls)) {
+    g.classList.toggle('on', n.includes(id));
+    g.classList.toggle('selected', selected === 'n:' + id);
+  }
+  for (const [id, g] of Object.entries(edgeEls)) {
+    const isOn = e.includes(id);
+    g.classList.toggle('on', isOn);
+    g.querySelector('path').setAttribute('marker-end', isOn ? 'url(#arrow-on)' : 'url(#arrow)');
+    if (isOn) edgeLayer.appendChild(g);
+  }
+  for (const [id, g] of Object.entries(checkEls)) {
+    const s = c[id] || '';
+    g.setAttribute('class', ['check', s, on.includes(id) ? 'on' : ''].join(' ').trim());
+    const sub = g.querySelector('.sub'); sub.textContent = s ? STATUS_WORD[s] : sub.dataset.sub;
+  }
+}
+
+function render() {
+  const hash = view === 'overview' ? '' : '#' + view;
+  if (location.hash !== hash) history.replaceState(null, '', hash || location.pathname + location.search);
+  document.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', b.id === 'chip-' + view ? 'true' : 'false'));
+  const panel = $('#panel');
+
+  if (view === 'overview') {
+    const I = idea !== null ? IDEAS[idea] : null;
+    paint(I ? { n: I.n, e: I.e || [], on: I.c || [] } : {}, !!I);
+    panel.innerHTML = `
+      <div class="scen-meta"><p class="eyebrow">Overview</p><h2>The system in six ideas</h2>
+      <p class="example">Point at an idea to see which parts of the map it covers. Point at any box on the map for its role.</p></div>
+      <ol class="ideas">${IDEAS.map((d, i) => `<li class="idea${i === idea ? ' on' : ''}" tabindex="0" data-i="${i}"><b>${d.t}</b><span>${d.b}</span></li>`).join('')}</ol>
+      <div class="nav"><button type="button" class="primary" id="start">Replay a change: a token in Figma</button></div>
+      <div class="detail" id="detail">${detailHTML()}</div>`;
+    panel.querySelectorAll('.idea').forEach(li => {
+      const i = +li.dataset.i;
+      const on = () => { idea = i; paintIdea(); };
+      li.addEventListener('mouseenter', on); li.addEventListener('focus', on);
+      li.addEventListener('click', on);
+    });
+    panel.querySelector('.ideas').addEventListener('mouseleave', () => { idea = null; paintIdea(); });
+    panel.querySelector('#start').onclick = () => { view = SCENARIOS[0].id; step = 0; render(); };
+    return;
+  }
+
+  const Sc = SCENARIOS.find(s => s.id === view);
+  const st = Sc.steps[step];
+  paint({ n: st.n, e: st.e, c: st.c || {} }, true);
+  const checks = Object.entries(st.c || {});
+  panel.innerHTML = `
+    <div class="scen-meta"><p class="eyebrow">Replay a change: ${Sc.group.toLowerCase()}</p><h2>${Sc.title}</h2><p class="example">${Sc.example}</p></div>
+    <div class="progress" role="group" aria-label="Steps">${Sc.steps.map((_, i) => `<button type="button" aria-label="Step ${i + 1}" class="${i < step ? 'done' : i === step ? 'cur' : ''}" data-i="${i}"></button>`).join('')}</div>
+    <div class="step">
+      <p class="stepno">Step ${step + 1} of ${Sc.steps.length}</p>
+      <h3>${st.t}</h3>
+      <p>${st.b}</p>
+      ${st.note ? `<p class="note">${st.note}</p>` : ''}
+      ${checks.length ? `<div class="checklist">${checks.map(([id, s]) => `<div class="row"><span class="badge ${s}">${STATUS_WORD[s]}</span><div><span class="name">${CHECKS[id].label}</span>${st.cn && st.cn[id] ? ` · ${st.cn[id]}` : ''}</div></div>`).join('')}</div>` : ''}
+    </div>
+    <div class="nav">
+      <button type="button" id="prev" ${step === 0 ? 'disabled' : ''}>Back</button>
+      <button type="button" class="primary" id="next">${step === Sc.steps.length - 1 ? 'Back to overview' : 'Next step'}</button>
+      <span class="hint">← → keys</span>
+    </div>
+    <div class="detail" id="detail">${detailHTML()}</div>`;
+  panel.querySelector('#prev').onclick = () => go(-1);
+  panel.querySelector('#next').onclick = () => go(1);
+  panel.querySelectorAll('.progress button').forEach(b => b.onclick = () => { step = +b.dataset.i; render(); });
+}
+function paintIdea() {
+  const I = idea !== null ? IDEAS[idea] : null;
+  paint(I ? { n: I.n, e: I.e || [], on: I.c || [] } : {}, !!I);
+  document.querySelectorAll('.idea').forEach(li => li.classList.toggle('on', +li.dataset.i === idea));
+}
+function go(d) {
+  if (view === 'overview') return;
+  const Sc = SCENARIOS.find(s => s.id === view);
+  if (d > 0 && step === Sc.steps.length - 1) { view = 'overview'; step = 0; idea = null; render(); return; }
+  step = Math.max(0, Math.min(Sc.steps.length - 1, step + d));
+  render();
+}
+function detailHTML() {
+  if (!selected) return `<p class="empty">Click any box or check on the map for what's defined there, what makes it, and what guards it.</p>`;
+  const [kind, id] = selected.split(':');
+  if (kind === 'c') {
+    const c = CHECKS[id];
+    return `<span class="badge plain">Automated check</span><h3 class="mono">${c.label}</h3>
+      <dl><dt>Compares</dt><dd>${c.compares}</dd><dt>Runs</dt><dd>${c.when}</dd><dt>Fails when</dt><dd>${c.fails}</dd><dt>Example</dt><dd>${c.example}</dd></dl>`;
+  }
+  const n = NODES[id];
+  const guards = n.guarded.length ? n.guarded.map(g => CHECKS[g].label).join(', ') : 'Nothing needed: nothing is defined here.';
+  const cls = n.role === 'sot' ? 'pass' : (n.role === 'copy' || n.role === 'gen') ? 'warn' : 'plain';
+  return `<span class="badge ${cls}">${roleTag[n.role]}</span><h3>${n.label}</h3>
+    <dl><dt>Its role</dt><dd>${n.purpose}</dd><dt>Defines</dt><dd>${n.defined}</dd><dt>Made by</dt><dd>${n.made}</dd><dt>Guarded by</dt><dd class="mono">${guards}</dd>${n.vary ? `<dt>Options</dt><dd>${n.vary}</dd>` : ''}</dl>`;
+}
+function select(key) {
+  selected = selected === key ? null : key;
+  for (const [id, g] of Object.entries(nodeEls)) g.classList.toggle('selected', selected === 'n:' + id);
+  const d = $('#detail'); d.innerHTML = detailHTML();
+  if (selected && window.matchMedia('(max-width: 980px)').matches) d.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+document.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input, textarea')) return;
+  if (e.key === 'ArrowRight') go(1);
+  if (e.key === 'ArrowLeft') go(-1);
+  if (e.key === 'Escape') { tip.hidden = true; }
+});
+window.addEventListener('hashchange', () => {
+  const id = location.hash.slice(1);
+  const next = SCENARIOS.find(s => s.id === id) ? id : 'overview';
+  if (next !== view) { view = next; step = 0; idea = null; render(); }
+});
+
+/* Reference sections */
+$('#cards').innerHTML = Object.values(CHECKS).map(c => `<div class="card"><h3>${c.label}</h3>
+  <p class="k">Compares</p><p>${c.compares}</p><p class="k">Runs</p><p>${c.when}</p><p class="k">Fails when</p><p>${c.fails}</p><p class="k">Example</p><p>${c.example}</p></div>`).join('');
+$('#where').innerHTML = `<thead><tr><th>What</th><th>Defined in (source of truth)</th><th>Copies and generated files</th><th>Guarded by</th></tr></thead><tbody>${WHERE.map(r => `<tr>${r.map((c, i) => `<td${i === 3 ? ' class="mono"' : ''}>${c}</td>`).join('')}</tr>`).join('')}</tbody>`;
+
+render();
+</script>
+</body>
+</html>
